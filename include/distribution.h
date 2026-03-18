@@ -3,9 +3,21 @@
 
 #include <vector>
 #include <random>
+#include <concepts>
 #include "point.h"
 
-template <typename Engine, typename PositionDistribution, typename ClassDistribution>
+template<typename T>
+concept RealDistribution = requires(T dist, std::default_random_engine& g) {
+    { dist(g) } -> std::convertible_to<double>;
+};
+
+template<typename T>
+concept DiscreteDistribution = requires(T dist, std::default_random_engine& g) {
+    { dist(g) } -> std::convertible_to<uint8_t>;
+};
+
+template <typename Engine, RealDistribution PositionDistribution, DiscreteDistribution ClassDistribution>
+requires std::uniform_random_bit_generator<std::remove_reference_t<Engine>>
 std::vector<Point> generate_random(
     Engine&& engine,
     std::size_t amount,
@@ -26,7 +38,8 @@ std::vector<Point> generate_random(
     return output;
 }
 
-template <typename Engine, typename PositionDistribution, typename EquationDistribution>
+template <typename Engine, RealDistribution PositionDistribution, RealDistribution EquationDistribution>
+requires std::uniform_random_bit_generator<std::remove_reference_t<Engine>>
 std::vector<Point> generate_linear(
     Engine&& engine,
     std::size_t amount,

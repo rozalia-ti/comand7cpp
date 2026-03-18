@@ -1,7 +1,7 @@
 #include <iostream>
 #include "point.h"
 
-std::ostream& operator<<(std::ostream& os, const Point& p) {
-    os << "(" << p.x << ", " << p.y << " - " << (int)p.cls << ")";
+std::ostream& Point::operator<<(std::ostream& os) {
+    os << "(" << x << ", " << y << " - " << (int)cls << ")";
     return os;
 }

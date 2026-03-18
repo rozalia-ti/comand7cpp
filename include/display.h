@@ -2,12 +2,9 @@
 #define DISPLAY_H
 
 #include <vector>
+#include <string>
+#include <memory>
 #include <functional>
-
-extern const char* BLOCK;
-extern const char* RESET;
-extern const char* RED;
-extern const char* WHITE;
 
 enum ShouldExit {
     Y,
@@ -18,7 +15,7 @@ class Display;
 
 class DisplayGrid {
 private:
-    int* buffer;
+    std::vector<int> buffer;
     int width;
     int height;
 
@@ -27,7 +24,7 @@ public:
     int get_width();
     int get_height();
     void resize(int new_width, int new_height);
-    int* block_at(int x, int y);
+    int& block_at(int x, int y);
 };
 
 class DrawCommand {
@@ -71,11 +68,11 @@ public:
 
 class DisplayCtx {
 private:
-    Display* display;
-    std::vector<DrawCommand*> draw_commands;
+    Display& display;
+    std::vector<std::unique_ptr<DrawCommand>> draw_commands;
 
 public:
-    DisplayCtx(Display* _display);
+    DisplayCtx(Display& _display);
 
     void clear();
     void draw_point(int pos_x, int pos_y, int color);
@@ -96,8 +93,7 @@ private:
     void init();
     void drop();
 
-    static int get_terminal_width();
-    static int get_terminal_height();
+    static void get_terminal_size(int& width, int& height);
 
 public:
     DisplayGrid grid;

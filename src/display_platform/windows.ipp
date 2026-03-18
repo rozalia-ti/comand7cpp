@@ -22,18 +22,13 @@ void Display::drop() {
     //std::cout << RESET << std::endl;
 }
 
-int Display::get_terminal_width() {
+void Display::get_terminal_width(int& width, int& height) {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-        return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+        return;
     }
-    return 80;
-}
-
-int Display::get_terminal_height() {
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-        return csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
-    }
-    return 80;
+    width = 80;
+    height = 80;
 }

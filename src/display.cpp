@@ -8,7 +8,7 @@
 #include "display.h"
 
 DisplayGrid::DisplayGrid() :
-    buffer(nullptr),
+    buffer({}),
     width(0),
     height(0)
 {}
@@ -29,18 +29,15 @@ void DisplayGrid::resize(int new_width, int new_height) {
     width = new_width;
     height = new_height;
 
-    if (buffer != nullptr) {
-        delete buffer;
-    }
+    buffer.resize(width * height);
 
-    buffer = new int[width * height];
     for (int i = 0; i < width * height; i++) {
         buffer[i] = 0;
     }
 }
 
-int* DisplayGrid::block_at(int x, int y) {
-    return &buffer[y * width + x];
+int& DisplayGrid::block_at(int x, int y) {
+    return buffer[y * width + x];
 }
 
 DrawCommand::~DrawCommand() = default;
@@ -60,8 +57,7 @@ void DrawPoint::apply(DisplayGrid& grid) {
         return;
     }
 
-    auto block = grid.block_at(pos_x, pos_y);
-    *block = color;
+    grid.block_at(pos_x, pos_y) = color;
 }
 
 DrawLine::DrawLine(int _pos1_x, int _pos1_y, int _pos2_x, int _pos2_y, int _color) :
@@ -83,8 +79,7 @@ void DrawLine::apply(DisplayGrid& grid) {
 
     while (true) {
         if (x >= 0 && y >= 0 && x < grid.get_width() && y < grid.get_height()) {
-            auto block = grid.block_at(x, y);
-            *block = color;
+            grid.block_at(x, y) = color;
         }
 
         if (x == pos2_x && y == pos2_y) break;
@@ -106,32 +101,31 @@ DrawClear::DrawClear() {}
 void DrawClear::apply(DisplayGrid& grid) {
     for (int x = 0; x < grid.get_width(); x++) {
         for (int y = 0; y < grid.get_height(); y++) {
-            *grid.block_at(x, y) = 0;
+            grid.block_at(x, y) = 0;
         }
     }
 }
 
-DisplayCtx::DisplayCtx(Display* _display) :
+DisplayCtx::DisplayCtx(Display& _display) :
     display(_display),
-    draw_commands({})
+    draw_commands()
 {}
 
 void DisplayCtx::clear() {
-    this->draw_commands.push_back(new DrawClear());
+    this->draw_commands.push_back(std::make_unique<DrawClear>());
 }
 
 void DisplayCtx::draw_point(int pos_x, int pos_y, int color) {
-    this->draw_commands.push_back(new DrawPoint(pos_x, pos_y, color));
+    this->draw_commands.push_back(std::make_unique<DrawPoint>(pos_x, pos_y, color));
 }
 
 void DisplayCtx::draw_line(int pos1_x, int pos1_y, int pos2_x, int pos2_y, int color) {
-    this->draw_commands.push_back(new DrawLine(pos1_x, pos1_y, pos2_x, pos2_y, color));
+    this->draw_commands.push_back(std::make_unique<DrawLine>(pos1_x, pos1_y, pos2_x, pos2_y, color));
 }
 
 void DisplayCtx::flush_draw_commands() {
-    for (DrawCommand* cmd : draw_commands) {
-        cmd->apply(display->grid);
-        delete cmd;
+    for (const auto& cmd : draw_commands) {
+        cmd->apply(display.grid);
     }
     draw_commands.clear();
 }
@@ -139,13 +133,13 @@ void DisplayCtx::flush_draw_commands() {
 Display::Display(int _fps, int _width, int _height) :
     fps(_fps),
     needs_redraw(true),
-    terminal_width(Display::get_terminal_width()),
-    terminal_height(Display::get_terminal_height()),
     width(_width),
     height(_height)
 
 {
     init();
+    Display::get_terminal_size(terminal_width, terminal_height);
+    terminal_height *= 2;
     grid.resize(width, height);
 }
 
@@ -155,10 +149,10 @@ Display::~Display() {
 
 void Display::mainloop(std::function<ShouldExit(DisplayCtx&)> update_fn) {
     while (true) {
-        terminal_width = Display::get_terminal_width();
-        terminal_height = Display::get_terminal_height() * 2;
+        Display::get_terminal_size(terminal_width, terminal_height);
+        terminal_height *= 2;
 
-        DisplayCtx ctx(this);
+        DisplayCtx ctx(*this);
         auto should_exit = update_fn(ctx);
 
         ctx.flush_draw_commands();
@@ -178,8 +172,8 @@ void Display::draw_grid() {
 
     for (int y = (grid.get_height() - 1) / 2 * 2; y >= 0; y -= 2) {
         for (int x = 0; x < grid.get_width(); x++) {
-            auto block_bottom = *grid.block_at(x, y);
-            auto block_top = y + 1 < grid.get_height() ? *grid.block_at(x, y + 1) : 0;
+            auto block_bottom = grid.block_at(x, y);
+            auto block_top = y + 1 < grid.get_height() ? grid.block_at(x, y + 1) : 0;
 
             buffer += "\033[38;5;" + std::to_string(block_top) + "m" +
                       "\033[48;5;" + std::to_string(block_bottom) + "m" +
