@@ -38,9 +38,14 @@ std::vector<Point> generate_random(
     return output;
 }
 
+struct GenerateLinearResult {
+    std::vector<Point> points;
+    double k, b;
+};
+
 template <typename Engine, RealDistribution PositionDistribution, RealDistribution EquationDistribution>
 requires std::uniform_random_bit_generator<std::remove_reference_t<Engine>>
-std::vector<Point> generate_linear(
+GenerateLinearResult generate_linear(
     Engine&& engine,
     std::size_t amount,
     PositionDistribution&& position_distribution,
@@ -69,7 +74,7 @@ std::vector<Point> generate_linear(
         });
     }
 
-    return output;
+    return { output, k, b };
 }
 
 #endif

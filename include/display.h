@@ -25,6 +25,7 @@ public:
     int get_height();
     void resize(int new_width, int new_height);
     int& block_at(int x, int y);
+    void copy_buffer(std::vector<int>& dest);
 };
 
 class DrawCommand {
