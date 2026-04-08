@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++20 -Wall -Wextra -pedantic
+CXXFLAGS := -std=c++20 -Wall -Wextra -pedantic -g
 LDFLAGS :=
 
 SRC_DIR := src
@@ -42,3 +42,7 @@ rebuild: clean all
 .PHONY: run
 run: all
 	./$(EXECUTABLE)
+
+.PHONY: debug
+debug: all
+	gdb ./$(EXECUTABLE)
