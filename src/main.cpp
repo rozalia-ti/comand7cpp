@@ -72,7 +72,7 @@ int main() {
         return x;
     };
 
-    auto linear_df = [](double _x) {
+    auto linear_df = [](double) {
         return 1.0;
     };
 
@@ -93,9 +93,13 @@ int main() {
     });
     ai.randomize();
 
+    std::vector<Point> points;
+    double k = 0.0;
+    double b = 0.0;
+
     for (int m = 0; m < 10000; m++) {
         auto points_result = generate_linear(engine, NUM_POINTS, position_distribution, equation_distribution);
-        auto points = points_result.points;
+        points = points_result.points;
 
         std::vector<double> ai_input(L0, 0);
 
@@ -132,8 +136,8 @@ int main() {
 
             const auto ai_output = ai.process(ai_input);
 
-            double k = ai_output[0];
-            double b = ai_output[1];
+            k = ai_output[0];
+            b = ai_output[1];
             error += sqrtl((b - points_result.b) * (b - points_result.b) + (k - points_result.k) * (k - points_result.k));
 
             std::cout << m << " - " << k << " " << b << " vs " << points_result.k << " " << points_result.b << std::endl;

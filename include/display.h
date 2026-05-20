@@ -85,7 +85,6 @@ public:
 class Display {
 private:
     int fps;
-    bool needs_redraw;
     int terminal_width;
     int terminal_height;
     int width;

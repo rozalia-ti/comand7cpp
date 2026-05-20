@@ -132,7 +132,6 @@ void DisplayCtx::flush_draw_commands() {
 
 Display::Display(int _fps, int _width, int _height) :
     fps(_fps),
-    needs_redraw(true),
     width(_width),
     height(_height)
 
