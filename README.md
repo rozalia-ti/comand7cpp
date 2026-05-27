@@ -65,30 +65,36 @@
 - **Валидация**: фиксированный `80/20` раздел (`train_test_split`).
 - **Нормализация данных**: z-score по тренировочному `d1`.
 
-## Как запустить
-
-
-
+## Как запустить (Windows)
 ### 1) Подготовка окружения (рекомендуется)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install pybind11
+```powershell
+cd path\to\comand7cpp
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install pybind11 matplotlib
+```
+
+Если PowerShell блокирует активацию скрипта:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
 ```
 
 ### 2) Сборка Python-модуля
 
-```bash
+```powershell
 make
 ```
 
-После сборки модуль появляется в `build/bin/comand7<suffix>` (например `.so`/`.so`-like).
+После сборки модуль появляется в `build\bin` (для Windows это `.pyd`).
 
 ### 3) Обучение и оценка
 
-```bash
-python3 train_classifier.py --d1 dataset1.csv --d2 path/to/dataset2.csv
+```powershell
+python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv
 ```
 
 Второй датасет обязателен по ТЗ; если не указан, используется `dataset1.csv`.
@@ -102,15 +108,15 @@ python3 train_classifier.py --d1 dataset1.csv --d2 path/to/dataset2.csv
 
 ### 4) Дообучение на третьем датасете
 
-```bash
-python3 train_classifier.py --d1 dataset1.csv --d2 path/to/dataset2.csv --finetune path/to/dataset3.csv
+```powershell
+python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv --finetune dataset3.csv
 ```
 
 ### 5) Сохранение весов
 
 По умолчанию:
 
-```bash
+```powershell
 --model model.bin
 ```
 
@@ -118,10 +124,37 @@ python3 train_classifier.py --d1 dataset1.csv --d2 path/to/dataset2.csv --finetu
 
 ### 6) Полезные команды
 
-```bash
+```powershell
 make clean          # удалить build
 make rebuild        # чистая пересборка
-python3 -m py_compile train_classifier.py   # синтакс. проверка скрипта
+python -m py_compile train_classifier.py   # синтакс. проверка скрипта
+```
+
+### 7) График качества в этом же запуске
+
+```powershell
+python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv --epochs 80 --eval-every 1 --plot
+```
+
+### 8) Запуск на другом ноутбуке (чистый старт)
+
+```powershell
+git clone <URL_репозитория> comand7cpp
+cd comand7cpp
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install pybind11 matplotlib
+git fetch origin
+git checkout defence
+git pull
+make clean
+make
+python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv --epochs 80 --eval-every 1 --plot
+```
+
+```powershell
+python -c "import sys; sys.path.insert(0, 'build\\bin'); import comand7; print('module:', comand7.__file__)"
 ```
 
 ## Аргументы скрипта `train_classifier.py`
@@ -139,6 +172,7 @@ python3 -m py_compile train_classifier.py   # синтакс. проверка �
 - `--finetune` — путь к третьему датасету.
 - `--finetune-epochs` — эпох дообучения (по умолчанию `50`).
 - `--eval-every` — период печати промежуточного F1 по `d1`.
+- `--plot` — построить график динамики `F1_d1` и `F1_d2` после обучения.
 
 ## Формат входного CSV
 
@@ -163,4 +197,4 @@ feature_0,feature_1,target
 
 - Для обучения по ТЗ используйте не `train_arbitraty`, а `train_classifier.py`.
 - Модуль `Model()` без параметров — legacy режим линейной аппроксимации; для классификации всегда используйте `Model(in_size, hidden1, hidden2)`.
-- Сборка зависит от доступности `pybind11` в используемой `python3`.
+- Сборка зависит от доступности `pybind11` в используемой версии `python`.
