@@ -22,7 +22,7 @@ void Display::drop() {
     //std::cout << RESET << std::endl;
 }
 
-void Display::get_terminal_width(int& width, int& height) {
+void Display::get_terminal_size(int& width, int& height) {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
         width = csbi.srWindow.Right - csbi.srWindow.Left + 1;

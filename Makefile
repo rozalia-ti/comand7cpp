@@ -1,6 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++20 -Wall -Wextra -pedantic -g
-LDFLAGS :=
+CXXFLAGS := -std=c++20 -Wall -Wextra -pedantic -g -fPIC -m64
 
 SRC_DIR := src
 INC_DIR := include
@@ -8,24 +7,43 @@ BUILD_DIR := build
 OBJ_DIR := $(BUILD_DIR)/obj
 BIN_DIR := $(BUILD_DIR)/bin
 
-INCLUDES := -I$(INC_DIR)
+PYBIND11_INCLUDES := $(shell py -m pybind11 --includes)
+PYTHON_SUFFIX := $(shell py -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 
-TARGET := plusi
-EXECUTABLE := $(BIN_DIR)/$(TARGET)
+PYTHON_ROOT := $(shell py -c "import sys; print(sys.base_prefix)")
+PYTHON_VERSION := $(shell py -c "import sys; print(f'{sys.version_info[0]}{sys.version_info[1]}')")
+
+PYTHON_LDFLAGS := -L$(PYTHON_ROOT) -lpython$(PYTHON_VERSION) -lkernel32 -luser32
+
+LDFLAGS := -shared -m64 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -lwinpthread -Wl,-Bdynamic $(PYTHON_LDFLAGS)
+INCLUDES := -I$(INC_DIR) $(PYBIND11_INCLUDES)
+
+TARGET := comand7
+LIBRARY := $(BIN_DIR)/$(TARGET)$(PYTHON_SUFFIX)
 
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
-OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
+LIB_SRCS := $(filter-out $(SRC_DIR)/main.cpp, $(SRCS))
+OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(LIB_SRCS))
 DEPS := $(OBJS:.o=.d)
 
+ifeq ($(OS),Windows_NT)
+    MKDIR = if not exist $(subst /,\\,$(1)) mkdir $(subst /,\\,$(1))
+    RMDIR = if exist $(subst /,\\,$(1)) rmdir /s /q $(subst /,\\,$(1))
+else
+    MKDIR = mkdir -p $(1)
+    RMDIR = rm -rf $(1)
+endif
+
 .PHONY: all
-all: dirs $(EXECUTABLE)
+all: dirs $(LIBRARY)
 
 .PHONY: dirs
 dirs:
-	@mkdir -p $(OBJ_DIR) $(BIN_DIR)
+	@$(call MKDIR,$(OBJ_DIR))
+	@$(call MKDIR,$(BIN_DIR))
 
-$(EXECUTABLE): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+$(LIBRARY): $(OBJS)
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@
@@ -34,15 +52,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILD_DIR)
+	@$(call RMDIR,$(BUILD_DIR))
 
 .PHONY: rebuild
 rebuild: clean all
-
-.PHONY: run
-run: all
-	./$(EXECUTABLE)
-
-.PHONY: debug
-debug: all
-	gdb ./$(EXECUTABLE)

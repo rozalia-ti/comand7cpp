@@ -4,6 +4,7 @@
 #include <vector>
 #include <functional>
 #include <random>
+#include <fstream>
 
 using activation_fn_t = std::function<double(double)>;
 
@@ -144,6 +145,28 @@ public:
                         layers[i].synapses[s][w_idx] -= lr * gradient;
                     }
                 }
+            }
+        }
+    }
+
+    void save(const std::string& filename) {
+        std::ofstream out(filename, std::ios::binary);
+        for (const auto& layer : layers) {
+            for (const auto& synapse : layer.synapses) {
+                size_t size = synapse.size();
+                out.write(reinterpret_cast<const char*>(&size), sizeof(size));
+                out.write(reinterpret_cast<const char*>(synapse.data()), size * sizeof(double));
+            }
+        }
+    }
+
+    void load(const std::string& filename) {
+        std::ifstream in(filename, std::ios::binary);
+        for (auto& layer : layers) {
+            for (auto& synapse : layer.synapses) {
+                size_t size;
+                in.read(reinterpret_cast<char*>(&size), sizeof(size));
+                in.read(reinterpret_cast<char*>(synapse.data()), size * sizeof(double));
             }
         }
     }

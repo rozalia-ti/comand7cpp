@@ -59,7 +59,7 @@ int calc_score(std::vector<Point>& points, double k, double b) {
     return score;
 }
 
-int main() {
+int main_() {
     std::ranlux48 engine(std::random_device{}());
     std::uniform_real_distribution<double> position_distribution(0.0, 100.0);
     //std::uniform_int_distribution<uint8_t> class_distribution(0, 1);
