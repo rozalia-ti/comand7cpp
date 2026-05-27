@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++20 -Wall -Wextra -pedantic -g -fPIC -m64
+CXXFLAGS := -std=c++20 -Wall -Wextra -pedantic -g -fPIC
 
 SRC_DIR := src
 INC_DIR := include
@@ -7,16 +7,28 @@ BUILD_DIR := build
 OBJ_DIR := $(BUILD_DIR)/obj
 BIN_DIR := $(BUILD_DIR)/bin
 
-PYBIND11_INCLUDES := $(shell py -m pybind11 --includes)
-PYTHON_SUFFIX := $(shell py -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+ifeq ($(OS),Windows_NT)
+    PYBIND11_INCLUDES := $(shell py -m pybind11 --includes)
+    PYTHON_SUFFIX := $(shell py -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 
-PYTHON_ROOT := $(shell py -c "import sys; print(sys.base_prefix)")
-PYTHON_VERSION := $(shell py -c "import sys; print(f'{sys.version_info[0]}{sys.version_info[1]}')")
+    PYTHON_ROOT := $(shell py -c "import sys; print(sys.base_prefix)")
+    PYTHON_VERSION := $(shell py -c "import sys; print(f'{sys.version_info[0]}{sys.version_info[1]}')")
 
-PYTHON_LDFLAGS := -L$(PYTHON_ROOT) -lpython$(PYTHON_VERSION) -lkernel32 -luser32
+    PYTHON_LDFLAGS := -L$(PYTHON_ROOT) -lpython$(PYTHON_VERSION) -lkernel32 -luser32
 
-LDFLAGS := -shared -m64 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -lwinpthread -Wl,-Bdynamic $(PYTHON_LDFLAGS)
-INCLUDES := -I$(INC_DIR) $(PYBIND11_INCLUDES)
+    LDFLAGS := -shared -m64 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -lwinpthread -Wl,-Bdynamic $(PYTHON_LDFLAGS)
+    INCLUDES := -I$(INC_DIR) $(PYBIND11_INCLUDES)
+else ifeq ($(shell uname),Darwin)
+    PYBIND11_INCLUDES := $(shell python3 -m pybind11 --includes)
+    PYTHON_SUFFIX := $(shell python3-config --extension-suffix)
+    LDFLAGS := -bundle -undefined dynamic_lookup $(shell python3-config --ldflags)
+    INCLUDES := -I$(INC_DIR) $(PYBIND11_INCLUDES)
+else
+    PYBIND11_INCLUDES := $(shell python3 -m pybind11 --includes)
+    PYTHON_SUFFIX := $(shell python3-config --extension-suffix)
+    LDFLAGS := -shared $(shell python3-config --ldflags)
+    INCLUDES := -I$(INC_DIR) $(PYBIND11_INCLUDES)
+endif
 
 TARGET := comand7
 LIBRARY := $(BIN_DIR)/$(TARGET)$(PYTHON_SUFFIX)
