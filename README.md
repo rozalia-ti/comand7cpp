@@ -5,7 +5,7 @@
 Проект реализует нейросеть на C++ для бинарной классификации и предоставляет к ней Python API через `pybind11`.
 
 По текущей версии лабораторной задачи:
-- загружаются CSV-датасеты (2 признака + метка)
+- загружаются CSV-датасеты (произвольное число признаков + метка)
 - производится разделение 80/20 (train/val)
 - обучается модель в Python-скрипте `train_classifier.py`
 - считается `F1` на каждом датасете
@@ -26,7 +26,7 @@
 - `include/display.h`, `src/display.cpp`, `src/display_platform/*` — консольная отрисовка (поддержка отладки и визуального режима).
 - `dataset1.csv` — пример первого датасета (в репозитории лежит только один датасет, второй нужно добавить в проект вручную).
 - `model.bin` — путь по умолчанию для сохранения весов модели после тренировки.
-- `comand7.cp314-win_amd64.pyd` — уже собранный Windows-модуль, если он есть в окружении.
+- `comand7<suffix>` — уже собранный Windows-модуль, если он есть в окружении.
 
 ## Функции и API
 
@@ -130,10 +130,10 @@ make rebuild        # чистая пересборка
 python -m py_compile train_classifier.py   # синтакс. проверка скрипта
 ```
 
-### 7) График качества в этом же запуске
+### 7) Прогон без графика (стандартный)
 
 ```powershell
-python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv --epochs 80 --eval-every 1 --plot
+python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv --epochs 80 --eval-every 1
 ```
 
 ### 8) Запуск на другом ноутбуке (чистый старт)
@@ -150,7 +150,7 @@ git checkout defence
 git pull
 make clean
 make
-python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv --epochs 80 --eval-every 1 --plot
+python .\train_classifier.py --d1 dataset1.csv --d2 dataset2.csv --epochs 80 --eval-every 1
 ```
 
 ```powershell
@@ -172,20 +172,19 @@ python -c "import sys; sys.path.insert(0, 'build\\bin'); import comand7; print('
 - `--finetune` — путь к третьему датасету.
 - `--finetune-epochs` — эпох дообучения (по умолчанию `50`).
 - `--eval-every` — период печати промежуточного F1 по `d1`.
-- `--plot` — построить график динамики `F1_d1` и `F1_d2` после обучения.
 
 ## Формат входного CSV
 
 - Заголовок обязателен.
-- Должно быть 2 признака и одна колонка цели.
+- Должно быть хотя бы 1 признака и одна колонка цели.
 - Колонку цели скрипт определяет по именам: `target`, `y`, `label`, `class`, `cls`.
 
 Пример структуры:
 
 ```csv
-feature_0,feature_1,target
-1.2,-0.7,0
--0.4,2.3,1
+feature_0,feature_1,feature_2,target
+1.2,-0.7,0.5,0
+0.4,2.3,-1.2,1
 ```
 
 ## Формат выходного/внутреннего представления

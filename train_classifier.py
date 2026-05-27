@@ -27,12 +27,13 @@ def load_dataset(path):
             raise RuntimeError(f"{path}: target column not found")
 
         feature_keys = [k for k in reader.fieldnames if k != target_key]
-        if len(feature_keys) != 2:
-            raise RuntimeError(f"{path}: expected 2 feature columns, got {len(feature_keys)}")
+        if len(feature_keys) == 0:
+            raise RuntimeError(f"{path}: expected at least 1 feature column")
 
         x, y = [], []
         for row in reader:
-            x.append([float(row[feature_keys[0]]), float(row[feature_keys[1]])])
+            sample = [float(row[k]) for k in feature_keys]
+            x.append(sample)
             y.append(float(int(float(row[target_key]))))
 
     return x, y
@@ -55,19 +56,33 @@ def train_test_split(x, y, test_ratio, seed):
 
 
 def fit_scaler(x_train):
-    feature0 = [row[0] for row in x_train]
-    feature1 = [row[1] for row in x_train]
-    mu0 = mean(feature0)
-    mu1 = mean(feature1)
-    std0 = max(1e-8, (sum((v - mu0) ** 2 for v in feature0) / len(feature0)) ** 0.5)
-    std1 = max(1e-8, (sum((v - mu1) ** 2 for v in feature1) / len(feature1)) ** 0.5)
-    return (mu0, mu1), (std0, std1)
+    if not x_train:
+        raise RuntimeError("dataset is empty, cannot fit scaler")
+
+    dims = len(x_train[0])
+    for i, row in enumerate(x_train):
+        if len(row) != dims:
+            raise RuntimeError(f"inconsistent feature dimensions in training set at row {i}: expected {dims}, got {len(row)}")
+
+    mus = []
+    stds = []
+    for feature_idx in range(dims):
+        values = [row[feature_idx] for row in x_train]
+        m = mean(values)
+        s = max(1e-8, (sum((v - m) ** 2 for v in values) / len(values)) ** 0.5)
+        mus.append(m)
+        stds.append(s)
+
+    return mus, stds
 
 
 def scale_dataset(x, mu, std):
-    mu0, mu1 = mu
-    std0, std1 = std
-    return [[(row[0] - mu0) / std0, (row[1] - mu1) / std1] for row in x]
+    dims = len(mu)
+    for i, row in enumerate(x):
+        if len(row) != dims:
+            raise RuntimeError(f"feature dimension mismatch at row {i}: expected {dims}, got {len(row)}")
+
+    return [[(row[idx] - mu[idx]) / std[idx] for idx in range(dims)] for row in x]
 
 
 def precision_recall_f1(y_true, y_pred):
@@ -154,6 +169,19 @@ def main():
     x1, y1 = load_dataset(args.d1)
     x2, y2 = load_dataset(args.d2)
 
+    if not x1:
+        raise RuntimeError(f"d1 dataset is empty: {args.d1}")
+    if not x2:
+        raise RuntimeError(f"d2 dataset is empty: {args.d2}")
+
+    d1_features = len(x1[0])
+    if any(len(row) != d1_features for row in x1):
+        raise RuntimeError(f"inconsistent feature dimensions in {args.d1}")
+    if any(len(row) != d1_features for row in x2):
+        raise RuntimeError(f"inconsistent feature dimensions in {args.d2}")
+    if len(x2[0]) != d1_features:
+        raise RuntimeError(f"feature dimension mismatch: {args.d1} has {d1_features}, {args.d2} has {len(x2[0])}")
+
     x1_train, y1_train, x1_val, y1_val = train_test_split(x1, y1, args.split, args.seed)
     _, _, x2_val, y2_val = train_test_split(x2, y2, args.split, args.seed + 1)
 
@@ -164,7 +192,7 @@ def main():
 
     lib = load_lib()
     Model = lib.Model
-    model = Model(2, args.hidden1, args.hidden2)
+    model = Model(d1_features, args.hidden1, args.hidden2)
 
     if args.load:
         model.load(args.load)
@@ -187,6 +215,11 @@ def main():
 
     if args.finetune is not None:
         x3, y3 = load_dataset(args.finetune)
+        if not x3:
+            raise RuntimeError(f"finetune dataset is empty: {args.finetune}")
+        if any(len(row) != d1_features for row in x3):
+            raise RuntimeError(f"inconsistent feature dimensions in {args.finetune}")
+
         x3_train, y3_train, x3_val, y3_val = train_test_split(x3, y3, args.split, args.seed + 2)
         x3_train = scale_dataset(x3_train, mu, std)
         x3_val = scale_dataset(x3_val, mu, std)
